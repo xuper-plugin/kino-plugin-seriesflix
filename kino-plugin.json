@@ -1,0 +1,84 @@
+{
+  "id": "seriesflix",
+  "name": "Seriesflix",
+  "version": "1.0.0",
+  "apiVersion": 9,
+  "entry": "plugin.js",
+  "icon": "icon.png",
+  "description": "Series en latino, castellano o subtituladas, a través de Seriesflix.",
+  "author": "xuper-plugin",
+  "homepage": "https://github.com/xuper-plugin/kino-plugin-seriesflix",
+  "hosts": [
+    "seriesflixhd.pw",
+    "seriesflixhd.casa",
+    "seriesflixhd.best",
+    "nupload.me",
+    "nupload.my",
+    "voe.sx"
+  ],
+  "streamHosts": "any",
+  "fetchHosts": "any",
+  "browser": true,
+  "capabilities": [
+    "search",
+    "home",
+    "browse",
+    "episodes",
+    "resolve",
+    "download"
+  ],
+  "categories": [
+    "series"
+  ],
+  "color": "#0277BD",
+  "theme": {
+    "accent": "#4FC3F7",
+    "onAccent": "#06121A",
+    "background": "#060E14",
+    "surface": "#10202B",
+    "highlight": "#81D4FA"
+  },
+  "telemetry": true,
+  "settings": [
+    {
+      "key": "language",
+      "label": "Idioma preferido",
+      "labelEn": "Preferred language",
+      "type": "select",
+      "default": "lat",
+      "options": [
+        {
+          "value": "lat",
+          "label": "Latino",
+          "labelEn": "Latin American"
+        },
+        {
+          "value": "esp",
+          "label": "Castellano",
+          "labelEn": "Castilian"
+        },
+        {
+          "value": "sub",
+          "label": "Subtitulado",
+          "labelEn": "Subtitled"
+        }
+      ]
+    },
+    {
+      "key": "cacheSection",
+      "label": "Caché",
+      "labelEn": "Cache",
+      "type": "section",
+      "hint": "Los nombres y años de cada serie se guardan 7 días.",
+      "hintEn": "Each series' names and years are kept for 7 days."
+    },
+    {
+      "key": "clearCache",
+      "label": "Vaciar caché",
+      "labelEn": "Clear cache",
+      "type": "action",
+      "confirm": "¿Vaciar la caché de títulos?",
+      "confirmEn": "Clear the title cache?"
+    }
+  ]
+}
