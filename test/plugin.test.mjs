@@ -96,6 +96,13 @@ test("an episode finds the show's page by its title, plays the first copy that o
   assert.ok(a.alternatives.every((x) => x.ref.length <= 512 && !x.url));
 });
 
+test("every request carries a browser User-Agent (the players answer okhttp's with another page), beside the source's own headers", async () => {
+  serve("breaking-bad", 1, 1);
+  await plugin.resolve("ep:1396:1:1");
+  assert.ok(calls.length >= 2);
+  for (const c of calls) assert.match(c.opts.headers["User-Agent"], /^Mozilla\/5\.0 .*Chrome/, c.url);
+});
+
 test("the show's names come from TMDB (es-MX with the es-ES and en translations) and are kept", async () => {
   serve("breaking-bad", 1, 1);
   await plugin.resolve("ep:1396:1:1");
