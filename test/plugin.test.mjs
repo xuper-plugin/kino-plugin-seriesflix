@@ -1,5 +1,5 @@
 // node --test test/plugin.test.mjs
-// Offline: a fake seriesflixhd.pw (episode pages with language blocks), fake players and a stub of `kino`.
+// Offline: a fake seriesflixhd.boats (episode pages with language blocks), fake players and a stub of `kino`.
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -34,7 +34,7 @@ const plugin = await import("../plugin.js");
 
 beforeEach(() => { calls.length = 0; tmdbCalls.length = 0; logs = []; config = {}; pages = {}; store = new Map(); delete globalThis.kino.fetchAnyHost; delete globalThis.kino.browser; metaImpl = async () => null; tmdbImpl = async () => ({ results: [] }); });
 
-const SITE = "https://seriesflixhd.pw";
+const SITE = "https://seriesflixhd.boats";
 const b64 = (s) => Buffer.from(s).toString("base64");
 
 /** TMDB's answer for a show: titles in es-MX, with the es-ES and en translations, and the years of its run. */
@@ -77,7 +77,7 @@ const manifest = JSON.parse(readFileSync(new URL("../kino-plugin.json", import.m
 test("the manifest is valid for Kino, declares the site, its old names and the players, and is series only", () => {
   const out = validateManifest(readFileSync(new URL("../kino-plugin.json", import.meta.url), "utf8"));
   assert.ok(!out.errors?.length, JSON.stringify(out.errors));
-  for (const h of ["seriesflixhd.pw", "seriesflixhd.casa", "seriesflixhd.best", "nupload.my", "nupload.me", "voe.sx"]) assert.ok(manifest.hosts.includes(h), h);
+  for (const h of ["seriesflixhd.boats", "seriesflixhd.pw", "seriesflixhd.casa", "seriesflixhd.best", "nupload.my", "nupload.me", "voe.sx"]) assert.ok(manifest.hosts.includes(h), h);
   assert.deepEqual(manifest.categories, ["series"]);
   assert.ok(manifest.capabilities.includes("download"));
 });

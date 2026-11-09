@@ -1,5 +1,5 @@
 // @ts-check
-// Kino plugin: Seriesflix — series in Latino, Castilian or subtitled, through seriesflixhd.pw. The site has a page per episode
+// Kino plugin: Seriesflix — series in Latino, Castilian or subtitled, through seriesflixhd.boats. The site has a page per episode
 // listing the players of every language (nupload, Voe); each is opened with its extractor and played as a stream. The catalog
 // (home, search, browse, episodes) comes from TMDB through kino.tmdb, which needs no host, and is series only.
 //

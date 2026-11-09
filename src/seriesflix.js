@@ -1,10 +1,11 @@
 // Seriesflix: series only. /episodio/<slug>-<s>x<e> lists a block of players per language, each a base64 `data-url`.
-// The site moved from seriesflixhd.casa / .best to seriesflixhd.pw (the old names redirect), so the new one is asked directly.
+// The site moved from seriesflixhd.casa / .best to .pw and now to seriesflixhd.boats (every old name redirects there, and Kino checks every
+// hop, so all of them stay declared); the current one is asked directly.
 import { extractorFor } from "./extractors/index.js";
 import { normLang } from "./util/lang.js";
 import { slugify } from "./util/slug.js";
 
-export const SITE = "https://seriesflixhd.pw";
+export const SITE = "https://seriesflixhd.boats";
 /** Most candidate pages one lookup may try before giving up on the series. */
 const MAX_PROBES = 4;
 

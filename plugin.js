@@ -173,7 +173,7 @@ function slugify(title) {
 }
 
 // src/seriesflix.js
-var SITE = "https://seriesflixhd.pw";
+var SITE = "https://seriesflixhd.boats";
 var MAX_PROBES = 4;
 var decode = (b64) => {
   try {
