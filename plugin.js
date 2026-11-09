@@ -266,6 +266,7 @@ function makeReq(kino2, { deadline }) {
 }
 
 // src/plugin.js
+globalThis.__kinoDropPendingFetches = true;
 if (typeof kino.meta !== "function") throw kino.error("unavailable", "kino.meta not available");
 if (typeof kino.tmdb !== "function") throw kino.error("unavailable", "kino.tmdb not available");
 var TMDB_IMG = "https://image.tmdb.org/t/p/";
@@ -390,9 +391,19 @@ async function homeRow(row) {
   const items = (res?.results || []).filter((r) => r.poster_path).slice(0, 20).map((r) => itemFromTmdb(r, "tv"));
   return items.length ? { id: row.id, title: t(row.title), genre: row.genre, ref: row.ref, items } : null;
 }
+var HOME_BUDGET_MS = 14e3;
 async function home() {
-  const settled = await Promise.allSettled(HOME_ROWS.map(homeRow));
-  const rows2 = settled.map((r) => r.status === "fulfilled" ? r.value : null).filter(Boolean);
+  const out = HOME_ROWS.map(() => null);
+  let done = false;
+  const all = Promise.all(HOME_ROWS.map((row, i) => homeRow(row).then((r) => {
+    out[i] = r;
+  }, () => {
+  }))).then(() => {
+    done = true;
+  });
+  const end = Date.now() + HOME_BUDGET_MS;
+  while (!done && Date.now() < end) await Promise.race([all, kino.sleep(Math.min(250, Math.max(1, end - Date.now())))]);
+  const rows2 = out.filter(Boolean);
   if (!rows2.length) throw kino.error("unavailable", "no home row could be loaded", { userMessage: t("unavailable") });
   return rows2;
 }
