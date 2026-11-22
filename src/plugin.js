@@ -8,9 +8,10 @@
 // Declared hosts: the site (and the two names that redirect to it) and the players'. `streamHosts: "any"` is for the CDNs the
 // players redirect to; `fetchHosts: "any"` and `browser` are for Voe, whose domain rotates.
 
-import { listCopies } from "./seriesflix.js";
-import { extractorFor } from "./extractors/index.js";
+import { listCopies, SITE } from "./seriesflix.js";
 import { makeReq, UA } from "./util/http.js";
+import { makeBrowse } from "./browse/index.js";
+import { RESOLVER_REPO, resolveViaHelper, resolverInstalled } from "./resolve-door.js";
 
 // Kino waits for every request a call left running before it delivers the call's answer; ask it to drop them once the call settles.
 globalThis.__kinoDropPendingFetches = true;
@@ -24,6 +25,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** One resolve: the show's lookup, the episode page and a few players, each bounded by its own request time. */
 const RESOLVE_MS = 40000;
 const MAX_COPIES = 8;
+const MAX_CAPTURES = 1;
 
 // ---- i18n ----
 
@@ -49,6 +51,7 @@ const STRINGS = {
     lat: "Latino",
     esp: "Castellano",
     sub: "Subtitulado",
+    needResolver: "Para reproducir, abre Seriesflix desde el menú e instala el motor de reproducción que te pedirá.",
   },
   en: {
     unavailable: "The service is not available right now.",
@@ -71,6 +74,7 @@ const STRINGS = {
     lat: "Latin",
     esp: "Castilian",
     sub: "Subtitled",
+    needResolver: "To play, open Seriesflix from the menu and install the playback engine it asks for.",
   },
 };
 
@@ -309,28 +313,33 @@ function toStream(s, c) {
   return out;
 }
 
-/** One copy opened: the stream, or null when its player shows none (or fails). */
-async function open(c, req) {
-  const ex = extractorFor(c.embedUrl);
-  if (!ex) return null;
+/**
+ * One copy opened through the shared kino-resolver (door): the stream, or null when nothing plays. Gated hosts (VOE)
+ * come back empty from the inline door, so Seriesflix (which has `browser: true`) captures them in its own hidden
+ * WebView — but only while this resolve still has capture budget (a `captured` stream spends one).
+ */
+async function open(c, req, budget) {
   try {
-    const s = await ex.extract(c.embedUrl, req, kino);
-    return s && typeof s.url === "string" && s.url ? toStream(s, c) : null;
+    const out = await resolveViaHelper(c.embedUrl, kino, SITE + "/", budget.captures > 0);
+    if (out && out.captured) budget.captures -= 1;
+    return out && typeof out.url === "string" && out.url ? toStream(out, c) : null;
   } catch (e) {
-    kino.log("[seriesflix]", c.server, (e && e.code) || "extract_failed");
+    kino.log("[seriesflix]", c.server, (e && e.code) || "resolve_failed");
     return null;
   }
 }
 
 export async function resolve(ref) {
+  if (!(await resolverInstalled(kino))) throw kino.error("unavailable", "resolver missing", { userMessage: t("needResolver") });
   const req = makeReq(kino, { deadline: Date.now() + RESOLVE_MS });
+  const budget = { captures: MAX_CAPTURES };
 
   // One copy picked from the Servidor menu (or reached by the automatic fallback): just that one
   if (ref.startsWith("cp:")) {
     const want = parseCopyRef(ref);
     if (!want) throw kino.error("not_found", "bad copy ref");
     const copy = (await listCopies(await showOf(want.ep), { req })).find((c) => c.lang === want.lang && c.server === want.server);
-    const stream = copy ? await open(copy, req) : null;
+    const stream = copy ? await open(copy, req, budget) : null;
     if (!stream) throw kino.error("not_found", "copy not available: " + want.lang + "/" + want.server, { userMessage: t("noStreams") });
     return stream;
   }
@@ -345,7 +354,7 @@ export async function resolve(ref) {
   let tried = 0;
   for (const c of copies) {
     tried++;
-    main = await open(c, req);
+    main = await open(c, req, budget);
     if (main) break;
   }
   if (!main) throw kino.error("not_found", "no copy opened for tmdb " + ep.tmdbId, { userMessage: t("noStreams") });
@@ -362,4 +371,58 @@ export async function action(key) {
     }
     return { message: t("cacheCleared") };
   }
+}
+
+// ---- browse screen + Kino Resolver install gate ----
+
+const SUPPORT_URL = "https://ko-fi.com/xuperplugins";
+
+/** The donate affordance under every install button: a QR on TV (a TV can't open a link well), a heart button on phone/desktop. */
+function supportNode(device) {
+  if (device === "tv") return { type: "QrImage", value: SUPPORT_URL, size: "large", labelText: "Si te gusta mi trabajo, escanéalo y apóyame", labelTextEn: "If you like my work, scan it and support me" };
+  return { type: "ElevatedButton", key: "donate", icon: "heart", labelText: "Si te gusta mi trabajo, apóyame", labelTextEn: "If you like my work, support me", onPressed: { go: { url: { href: SUPPORT_URL } } } };
+}
+
+/** The install gate: the first screen while the shared kino-resolver (the engine Seriesflix plays through) is not installed.
+ *  The donate button sits under the install button, as on every gate. */
+function installGateView(device) {
+  return { type: "Scaffold", key: "seriesflix-install",
+    body: { type: "SingleChildScrollView", key: "installScroll", children: [
+      { type: "Column", padding: 24, gap: 16, crossAxisAlignment: "stretch", children: [
+        { type: "Text", text: "Necesitas el motor de reproducción", textEn: "You need the playback engine", style: "h3" },
+        { type: "Text", color: "secondary", text: "Seriesflix reproduce a través de Kino Resolver (gratis). Instálalo una vez y sirve para este y para otros plugins de sitios.", textEn: "Seriesflix plays through Kino Resolver (free). Install it once and it works here and in other site plugins." },
+        { type: "ElevatedButton", key: "installResolver", labelText: "Instalar Kino Resolver", labelTextEn: "Install Kino Resolver", onPressed: { go: { installPlugin: { repo: RESOLVER_REPO } } } },
+        supportNode(device),
+      ] },
+    ] },
+  };
+}
+
+/** The tabs of the own browse screen: one tab, the TMDB Home rows (series only). */
+const SCREEN_TABS = [
+  { id: "series", es: "Series", en: "Series" },
+];
+
+let browseInstance = null;
+const browseScreen = () => (browseInstance ??= makeBrowse({
+  kino,
+  brand: "Seriesflix",
+  tabs: SCREEN_TABS,
+  loadTab: async () => ({ rows: await home() }),
+  searchTitles: (q) => search({ q }),
+  canPlay: false,
+}));
+
+/** `screen(ctx)`: the install gate while the resolver is missing, the rich browse screen (its TMDB Home rows) once it is there. */
+export async function screen(ctx) {
+  await null;
+  const c = ctx && typeof ctx === "object" ? ctx : {};
+  if (!(c.installed && c.installed[RESOLVER_REPO])) return installGateView(c.device);
+  return browseScreen().view(c);
+}
+
+/** `screenEvent(ev)`: the screen's events (its timers load a tab or a search, one per call). */
+export async function screenEvent(ev) {
+  await null;
+  return browseScreen().event(ev && typeof ev === "object" ? ev : {});
 }
