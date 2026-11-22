@@ -1,7 +1,7 @@
 {
   "id": "seriesflix",
   "name": "Seriesflix",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "apiVersion": 20,
   "entry": "plugin.js",
   "icon": "icon.png",

@@ -208,6 +208,17 @@ test("a copy the door cannot open is skipped: the next one plays, and the failed
   assert.ok(!a.alternatives.some((x) => x.label === "Latino · Nupload"));
 });
 
+test("resolve learns which server opens and, within a language, tries it first next time", async () => {
+  serve("breaking-bad", 1, 1);
+  // nupload gives nothing; the resolver opens Voe (Latino) -> Voe earns a win, nupload losses.
+  door = (url) => (/nupload\.my/.test(url) ? { streams: [] } : defaultDoor(url));
+  assert.equal((await plugin.resolve("ep:1396:1:1")).label, "Latino · Voe");
+  // Next time every server works; the learned order puts Voe ahead of nupload inside the Latino group.
+  serve("breaking-bad", 1, 1); door = null; doorCalls = [];
+  assert.equal((await plugin.resolve("ep:1396:1:1")).label, "Latino · Voe", "the server that opened is tried first");
+  assert.equal(doorCalls[0], "https://voe.sx/e/voelat", "Voe is the first embed asked now, not nupload");
+});
+
 test("players no extractor knows are left out; with only those, the person reads a readable error", async () => {
   serve("breaking-bad", 1, 1, [block("LATINO", [row(1, "LATINO", "HD • Waaw", "https://netu.example/e/1"), row(2, "LATINO", "HD • Pl", "https://streamtape.example/e/2")])]);
   await assert.rejects(() => plugin.resolve("ep:1396:1:1"), (e) => e.code === "not_found" && e.userMessage === "No se encontraron fuentes para este episodio.");

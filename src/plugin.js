@@ -250,16 +250,35 @@ const SERVER_LABEL = { nupload: "Nupload", voe: "Voe" };
 /** Fastest first: Voe may need the hidden browser (several seconds), nupload is one request. */
 const SERVER_ORDER = ["nupload", "voe"];
 
+// ---- learned server reliability (kept in storage; the server that opens for this person is tried first next time) ----
+const STATS_KEY = "srvStats";
+const STATS_CAP = 24; // halve the counts past this, so a server that recovers climbs back
+function readStats() { try { const o = JSON.parse(kino.storage.get(STATS_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (_) { return {}; } }
+/** Laplace-smoothed success rate of a server (unknown = 0.5). */
+function scoreOf(id, stats) { const s = stats[id] || { ok: 0, fail: 0 }; return (s.ok + 1) / (s.ok + s.fail + 2); }
+/** Record that a server opened (ok=true) or not; never throws. */
+function noteServer(id, ok) {
+  try {
+    const stats = readStats();
+    const s = stats[id] || { ok: 0, fail: 0 };
+    s[ok ? "ok" : "fail"] += 1;
+    if (s.ok + s.fail > STATS_CAP) { s.ok = Math.round(s.ok / 2); s.fail = Math.round(s.fail / 2); }
+    stats[id] = s;
+    kino.storage.set(STATS_KEY, JSON.stringify(stats));
+  } catch (_) { /* the stats are a nicety */ }
+}
+
 /** The languages in the order the person prefers them (the "language" setting), the other two after it. */
 function languageOrder() {
   const pref = String(kino.config.get("language") || "lat");
   return pref === "esp" ? ["esp", "lat", "sub"] : pref === "sub" ? ["sub", "lat", "esp"] : ["lat", "esp", "sub"];
 }
 
-/** The copies, preferred language first, then the faster servers first. */
+/** The copies, preferred language first, then within a language the server that has opened for this person, then the static speed order. */
 function ordered(copies) {
   const langs = languageOrder();
-  const rank = (c) => langs.indexOf(c.lang) * 10 + Math.max(0, SERVER_ORDER.indexOf(c.server));
+  const stats = readStats();
+  const rank = (c) => langs.indexOf(c.lang) * 100 + (1 - scoreOf(c.server, stats)) * 20 + Math.max(0, SERVER_ORDER.indexOf(c.server));
   return [...copies].sort((a, b) => rank(a) - rank(b));
 }
 
@@ -355,6 +374,7 @@ export async function resolve(ref) {
   for (const c of copies) {
     tried++;
     main = await open(c, req, budget);
+    noteServer(c.server, !!main); // learn which server opens, for next time
     if (main) break;
   }
   if (!main) throw kino.error("not_found", "no copy opened for tmdb " + ep.tmdbId, { userMessage: t("noStreams") });
