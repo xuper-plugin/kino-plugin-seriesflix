@@ -42,7 +42,8 @@ async function captureStreams(kino, embedUrl, referer) {
 }
 
 /**
- * Resolve one hoster embed through the kino-resolver, falling back to a WebView capture when `allowCapture`.
+ * Resolve one hoster embed through the kino-resolver, falling back to a WebView capture when `allowCapture` (a boolean,
+ * or a function that decides -- and spends the caller's budget -- right before the capture starts).
  * Returns open()'s shape ({ url, mime, headers, captured?, subtitles? }), or null when nothing plays.
  */
 export async function resolveViaHelper(embedUrl, kino, referer, allowCapture = true) {
@@ -55,7 +56,9 @@ export async function resolveViaHelper(embedUrl, kino, referer, allowCapture = t
   let streams = res && Array.isArray(res.streams) ? res.streams.slice() : [];
   const subtitles = res && Array.isArray(res.subtitles) ? res.subtitles.filter((x) => x && x.lang && x.url) : [];
   let captured = false;
-  if (!streams.length && allowCapture) { streams = await captureStreams(kino, embedUrl, referer); captured = streams.length > 0; }
+  // `allowCapture` is a boolean or a function asked right before a capture would start (so a caller can spend its
+  // capture budget on the attempt, and refuse when too little time is left for a 20 s page).
+  if (!streams.length && (typeof allowCapture === "function" ? allowCapture() : allowCapture)) { streams = await captureStreams(kino, embedUrl, referer); captured = streams.length > 0; }
   const s = pickBest(streams);
   if (!s) return null;
   const headers = headersOf(s);

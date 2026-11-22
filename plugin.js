@@ -839,7 +839,7 @@ async function resolveViaHelper(embedUrl, kino2, referer, allowCapture = true) {
   let streams = res && Array.isArray(res.streams) ? res.streams.slice() : [];
   const subtitles = res && Array.isArray(res.subtitles) ? res.subtitles.filter((x) => x && x.lang && x.url) : [];
   let captured = false;
-  if (!streams.length && allowCapture) {
+  if (!streams.length && (typeof allowCapture === "function" ? allowCapture() : allowCapture)) {
     streams = await captureStreams(kino2, embedUrl, referer);
     captured = streams.length > 0;
   }
@@ -873,6 +873,12 @@ var DAY_MS = 24 * 60 * 60 * 1e3;
 var RESOLVE_MS = 4e4;
 var MAX_COPIES = 8;
 var MAX_CAPTURES = 1;
+var CAPTURE_PAGE_MS = 23e3;
+function takeCapture(budget) {
+  if (!budget || budget.captures <= 0 || budget.deadline - Date.now() < CAPTURE_PAGE_MS) return false;
+  budget.captures -= 1;
+  return true;
+}
 var STRINGS = {
   es: {
     unavailable: "El servicio no est\xE1 disponible en este momento.",
@@ -1149,8 +1155,7 @@ function toStream(s, c) {
 }
 async function open(c, req, budget) {
   try {
-    const out = await resolveViaHelper(c.embedUrl, kino, SITE + "/", budget.captures > 0);
-    if (out && out.captured) budget.captures -= 1;
+    const out = await resolveViaHelper(c.embedUrl, kino, SITE + "/", () => takeCapture(budget));
     return out && typeof out.url === "string" && out.url ? toStream(out, c) : null;
   } catch (e) {
     kino.log("[seriesflix]", c.server, e && e.code || "resolve_failed");
@@ -1160,7 +1165,7 @@ async function open(c, req, budget) {
 async function resolve(ref) {
   if (!await resolverInstalled(kino)) throw kino.error("unavailable", "resolver missing", { userMessage: t("needResolver") });
   const req = makeReq(kino, { deadline: Date.now() + RESOLVE_MS });
-  const budget = { captures: MAX_CAPTURES };
+  const budget = { captures: MAX_CAPTURES, deadline: Date.now() + RESOLVE_MS };
   if (ref.startsWith("cp:")) {
     const want = parseCopyRef(ref);
     if (!want) throw kino.error("not_found", "bad copy ref");
