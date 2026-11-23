@@ -1,7 +1,7 @@
 {
   "id": "seriesflix",
   "name": "Seriesflix",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -109,5 +109,36 @@
   },
   "recommends": [
     "xuper-plugin/kino-plugin-kino-resolver"
-  ]
+  ],
+  "provides": {
+    "catalog": {
+      "summary": "Titles this plugin finds, for the author's other plugins",
+      "calls": {
+        "search": {
+          "in": {
+            "q": "string",
+            "type": "string?"
+          },
+          "out": "Item[]"
+        }
+      },
+      "types": {
+        "Item": {
+          "id": "string",
+          "ref": "string",
+          "title": "string",
+          "kind": "string",
+          "poster": "string?",
+          "backdrop": "string?",
+          "year": "string?",
+          "overview": "string?",
+          "tmdb": "number?"
+        }
+      }
+    }
+  },
+  "signature": {
+    "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
+    "value": "091d097ce2ee118d157ebde83339ee78ce2998b8ff7ef3c6f67a54bb54d910c7dc3c217d17143215f66c81ae2b6ce44a749573f3a69205bd827a15c36ca10b07"
+  }
 }
