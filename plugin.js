@@ -865,6 +865,7 @@ async function resolverInstalled(kino2) {
 }
 
 // src/plugin.js
+var tmdb = (path, params = {}) => kino.tmdb(path, { language: String(kino.lang || "").toLowerCase().startsWith("en") ? "en-US" : "es-MX", ...params });
 globalThis.__kinoDropPendingFetches = true;
 if (typeof kino.meta !== "function") throw kino.error("unavailable", "kino.meta not available");
 if (typeof kino.tmdb !== "function") throw kino.error("unavailable", "kino.tmdb not available");
@@ -995,7 +996,7 @@ var HOME_ROWS = [
 ];
 var DISCOVER = { sort_by: "popularity.desc", "vote_count.gte": 200 };
 async function homeRow(row) {
-  const res = await kino.tmdb(row.path, { ...row.path.startsWith("/discover") ? DISCOVER : {}, ...row.params || {} });
+  const res = await tmdb(row.path, { ...row.path.startsWith("/discover") ? DISCOVER : {}, ...row.params || {} });
   const items = (res?.results || []).filter((r) => r.poster_path).slice(0, 20).map((r) => itemFromTmdb(r, "tv"));
   return items.length ? { id: row.id, title: t(row.title), genre: row.genre, ref: row.ref, items } : null;
 }
@@ -1018,7 +1019,7 @@ async function home() {
 async function search(query) {
   if (!String(query.q || "").trim()) return [];
   if (query.type === "movie" || query.type === "music" || query.type === "podcast") return [];
-  const res = await kino.tmdb("/search/tv", { query: query.q });
+  const res = await tmdb("/search/tv", { query: query.q });
   return kino.rank.filterRelevant((res?.results || []).map((r) => itemFromTmdb(r, "tv")), titlesOf(query));
 }
 async function browse(ref, cursor) {
@@ -1038,13 +1039,13 @@ async function browse(ref, cursor) {
   } else {
     return { items: [] };
   }
-  const res = await kino.tmdb(path, params);
+  const res = await tmdb(path, params);
   const items = (res?.results || []).filter((r) => r.poster_path).map((r) => itemFromTmdb(r, "tv"));
   const next = res?.page < res?.total_pages ? String(page + 1) : void 0;
   return { items, next };
 }
 async function categories() {
-  const res = await kino.tmdb("/genre/tv/list");
+  const res = await tmdb("/genre/tv/list");
   return (res?.genres || []).slice(0, 24).map((g) => ({ id: "gt" + g.id, title: g.name, ref: "genre:tv:" + g.id }));
 }
 async function episodes(ref) {
