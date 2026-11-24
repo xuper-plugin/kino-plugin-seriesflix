@@ -147,7 +147,7 @@ const titlesOf = (query) => [query.q, query.originalTitle, ...(query.altTitles |
  * The Home rows, in order: series only. `genre` is one of Kino's ten ids (it lines the rows up with other plugins' in the
  * Categorías tab) and `ref` makes the row browsable ("Ver más"). `path` is the TMDB list behind it; `params` narrow it.
  */
-const HOME_ROWS = [
+export const HOME_ROWS = [
   { id: "trending", title: "trending", genre: "series", ref: "trend:tv", path: "/trending/tv/week" },
   { id: "on-the-air", title: "onTheAir", genre: "series", ref: "list:tv:on_the_air", path: "/tv/on_the_air" },
   { id: "top-series", title: "topSeries", genre: "series", ref: "list:tv:top_rated", path: "/tv/top_rated" },
@@ -160,14 +160,23 @@ const HOME_ROWS = [
   { id: "g-reality", title: "gReality", genre: "series", ref: "genre:tv:10764", path: "/discover/tv", params: { with_genres: 10764 } },
   { id: "kids", title: "kids", genre: "infantil", ref: "genre:tv:10762", path: "/discover/tv", params: { with_genres: 10762 } },
   { id: "docs", title: "docs", genre: "documentales", ref: "genre:tv:99", path: "/discover/tv", params: { with_genres: 99 } },
-  { id: "anime", title: "anime", genre: "anime", ref: "anime:tv", path: "/discover/tv", params: { with_genres: 16, with_origin_country: "JP" } },
+  { id: "anime", title: "anime", genre: "anime", ref: "anime:tv", path: "/discover/tv", params: { with_genres: 16, with_origin_country: "JP" }, airing: true },
 ];
+
+/** The type tag each Home row carries, by row id (what Kino files its titles under). */
+export const homeRowTags = () => Object.fromEntries(HOME_ROWS.map((r) => [r.id, r.genre]));
+
+/** The Anime row shows what is NEW: Japanese animation with an episode aired in the last 60 days (popular first), not the all-time favourites. Day granularity keeps TMDB's cache key stable. */
+export function airingAnime(now = new Date()) {
+  const day = (d) => d.toISOString().slice(0, 10);
+  return { with_genres: 16, with_origin_country: "JP", "air_date.gte": day(new Date(now.getTime() - 60 * 86400000)), "air_date.lte": day(now), "vote_count.gte": 10 };
+}
 
 // A discover list sorted by popularity is full of titles nobody has voted on: ask for some votes.
 const DISCOVER = { sort_by: "popularity.desc", "vote_count.gte": 200 };
 
 async function homeRow(row) {
-  const res = await tmdb(row.path, { ...(row.path.startsWith("/discover") ? DISCOVER : {}), ...(row.params || {}) });
+  const res = await tmdb(row.path, { ...(row.path.startsWith("/discover") ? DISCOVER : {}), ...(row.airing ? airingAnime() : row.params || {}) });
   // a row of posters: what has none looks broken
   const items = (res?.results || []).filter((r) => r.poster_path).slice(0, 20).map((r) => itemFromTmdb(r, "tv"));
   return items.length ? { id: row.id, title: t(row.title), genre: row.genre, ref: row.ref, items } : null;
@@ -212,7 +221,7 @@ export async function browse(ref, cursor) {
   } else if (parts[0] === "anime" && parts[1] === "tv") {
     // Japanese animation: TMDB has no anime flag, but animation from Japan is what the Home row means
     path = "/discover/tv";
-    params = { ...DISCOVER, with_genres: 16, with_origin_country: "JP", page };
+    params = { ...DISCOVER, ...airingAnime(), page };
   } else if (parts[0] === "genre" && parts[1] === "tv" && /^\d+$/.test(parts[2] || "")) {
     path = "/discover/tv";
     params = { ...DISCOVER, with_genres: parts[2], page };

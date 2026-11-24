@@ -1307,11 +1307,16 @@ var HOME_ROWS = [
   { id: "g-reality", title: "gReality", genre: "series", ref: "genre:tv:10764", path: "/discover/tv", params: { with_genres: 10764 } },
   { id: "kids", title: "kids", genre: "infantil", ref: "genre:tv:10762", path: "/discover/tv", params: { with_genres: 10762 } },
   { id: "docs", title: "docs", genre: "documentales", ref: "genre:tv:99", path: "/discover/tv", params: { with_genres: 99 } },
-  { id: "anime", title: "anime", genre: "anime", ref: "anime:tv", path: "/discover/tv", params: { with_genres: 16, with_origin_country: "JP" } }
+  { id: "anime", title: "anime", genre: "anime", ref: "anime:tv", path: "/discover/tv", params: { with_genres: 16, with_origin_country: "JP" }, airing: true }
 ];
+var homeRowTags = () => Object.fromEntries(HOME_ROWS.map((r) => [r.id, r.genre]));
+function airingAnime(now = /* @__PURE__ */ new Date()) {
+  const day = (d) => d.toISOString().slice(0, 10);
+  return { with_genres: 16, with_origin_country: "JP", "air_date.gte": day(new Date(now.getTime() - 60 * 864e5)), "air_date.lte": day(now), "vote_count.gte": 10 };
+}
 var DISCOVER = { sort_by: "popularity.desc", "vote_count.gte": 200 };
 async function homeRow(row) {
-  const res = await tmdb(row.path, { ...row.path.startsWith("/discover") ? DISCOVER : {}, ...row.params || {} });
+  const res = await tmdb(row.path, { ...row.path.startsWith("/discover") ? DISCOVER : {}, ...row.airing ? airingAnime() : row.params || {} });
   const items = (res?.results || []).filter((r) => r.poster_path).slice(0, 20).map((r) => itemFromTmdb(r, "tv"));
   return items.length ? { id: row.id, title: t(row.title), genre: row.genre, ref: row.ref, items } : null;
 }
@@ -1347,7 +1352,7 @@ async function browse(ref, cursor) {
     path = `/tv/${parts[2]}`;
   } else if (parts[0] === "anime" && parts[1] === "tv") {
     path = "/discover/tv";
-    params = { ...DISCOVER, with_genres: 16, with_origin_country: "JP", page };
+    params = { ...DISCOVER, ...airingAnime(), page };
   } else if (parts[0] === "genre" && parts[1] === "tv" && /^\d+$/.test(parts[2] || "")) {
     path = "/discover/tv";
     params = { ...DISCOVER, with_genres: parts[2], page };
@@ -1569,11 +1574,14 @@ async function screenEvent(ev) {
 }
 var proto_catalog_search = catalogDoor(search);
 export {
+  HOME_ROWS,
   action,
+  airingAnime,
   browse,
   categories,
   episodes,
   home,
+  homeRowTags,
   proto_catalog_search,
   resolve,
   screen,

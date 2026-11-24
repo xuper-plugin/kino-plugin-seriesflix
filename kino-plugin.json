@@ -1,7 +1,7 @@
 {
   "id": "seriesflix",
   "name": "Seriesflix",
-  "version": "1.3.8",
+  "version": "1.3.9",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -139,6 +139,6 @@
   },
   "signature": {
     "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    "value": "0f7c45e28d73bf6e5422cfc57ba3b1d9c60163814b58cd971d60e40c8ab1cddc89398d1541ffe956422d4a6a1e52bf9fad25873f9bdf9c169b31d3f90b2a5b04"
+    "value": "a95938e2eeac109afd93f5e69482cf4b1a35ea527f786bc1869f79d27bbd7a9f8c61111a573e7698da31899bddfb6546a50e0fd46d0737ac41aa13273e984806"
   }
 }

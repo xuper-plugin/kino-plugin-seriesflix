@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.9
+
+- Home: the Anime row shows what is airing now (Japanese animation with an episode in the last 60 days, popular first) instead of the all-time favourites; every row stays typed
+
 ## 1.3.8
 
 - Categorías: every genre tile now shows a picture (a well-known TMDB backdrop per genre, no extra requests)
