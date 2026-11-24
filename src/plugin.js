@@ -11,6 +11,7 @@
 import { listCopies, SITE } from "./seriesflix.js";
 import { makeReq, UA } from "./util/http.js";
 import { makeStandardScreen } from "./std/index.js";
+import { offered } from "./std/rank.js";
 import { LOGO, LOGO_ASPECT } from "./logo.js";
 import { resolveViaHelper, resolverInstalled } from "./resolve-door.js";
 
@@ -298,7 +299,8 @@ function ordered(copies) {
   const langs = languageOrder();
   const stats = readStats();
   const rank = (c) => langs.indexOf(c.lang) * 100 + (1 - scoreOf(c.server, stats)) * 20 + Math.max(0, SERVER_ORDER.indexOf(c.server));
-  return [...copies].sort((a, b) => rank(a) - rank(b));
+  // Waaw/netu is never offered (std/rank.js: no one gets past its click-on-image check).
+  return copies.filter((c) => offered(c.url) && offered(c.server)).sort((a, b) => rank(a) - rank(b));
 }
 
 const labelOf = (c) => `${t(c.lang)} · ${SERVER_LABEL[c.server] || c.server}`;
