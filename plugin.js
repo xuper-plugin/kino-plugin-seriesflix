@@ -475,13 +475,15 @@ var rail = (r, key, words, headers) => ({
   items: r.items,
   ...withHeaders(headers)
 });
-function browseView(cfg, { tab, data, recent, pending, failed, searching = false, device = "phone", own = null }) {
+function browseView(cfg, { tab, data, recent, pending, failed, searching = false, device = "phone", own = null, ownActions = [] }) {
   const tv = device === "tv";
   const tabs = own ? [cfg.tabs[0]] : cfg.tabs;
   const active = tabs.some((t2) => t2.id === tab) ? tab : tabs[0].id;
   const withTabs = tabs.length > 1;
   const body = [];
-  if (own) {
+  const ownBlocks = own && !Array.isArray(own) && Array.isArray(own.blocks) ? own.blocks : null;
+  if (ownBlocks) {
+  } else if (own) {
     body.push(...own);
   } else if (data) {
     const h = cfg.imageHeaders;
@@ -520,6 +522,8 @@ function browseView(cfg, { tab, data, recent, pending, failed, searching = false
     actions: [
       // barSearch: false (std 1.7.0): the plugin draws its own search field in its page instead of the bar's icon.
       ...cfg.barSearch ? [iconButton("searchButton", "search", "search", { ui: searchOpenOps(tabsInBar), event: "searchOpened" })] : [],
+      // std 1.9.0: the page's own bar buttons (page.actions), before the settings gear.
+      ...Array.isArray(ownActions) ? ownActions : [],
       iconButton("settingsButton", "settings", "settings", "openSettings")
     ]
   });
@@ -529,7 +533,7 @@ function browseView(cfg, { tab, data, recent, pending, failed, searching = false
     appBar,
     body: { type: "Column", key: "page", children: [
       ...withTabs && !tv ? [{ type: "Column", key: "tabsRow", padding: { compact: 0, expanded: 24 }, children: [tabBar(tabs, active)] }] : [],
-      { type: "SingleChildScrollView", key: "browse-" + active, flex: 1, children: [...banner ? [banner] : [], { type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: body }] }
+      { type: "SingleChildScrollView", key: "browse-" + active, flex: 1, children: ownBlocks ? ownBlocks.filter((b) => b && Array.isArray(b.nodes) && b.nodes.length).flatMap((b, i) => b.edge ? b.nodes : [{ type: "Column", key: "block-" + i, padding: { compact: 12, expanded: 24 }, gap: 16, crossAxisAlignment: "stretch", children: b.nodes }]) : [...banner ? [banner] : [], { type: "Column", padding: { compact: 12, expanded: 24 }, gap: 16, children: body }] }
     ] },
     ...pending ? { every: { ms: POLL_MS, event: "tick" } } : {}
   };
@@ -870,7 +874,17 @@ function makeStandardScreen({ kino: kino2, name, nameEn, logo = null, logoAspect
     const pending = Array.isArray(st.pending) && st.pending.length > 0;
     const searching = st.searching === true;
     if (page) {
-      const tree = browseView(cfg, { tab: TAB_IDS[0], data: null, recent: [], pending: false, failed: false, searching, device, own: page.view({ ...c, state: st }) || [] });
+      const tree = browseView(cfg, {
+        tab: TAB_IDS[0],
+        data: null,
+        recent: [],
+        pending: false,
+        failed: false,
+        searching,
+        device,
+        own: page.view({ ...c, state: st }) || [],
+        ownActions: page.actions ? page.actions({ ...c, state: st }) || [] : []
+      });
       const every = page.every ? page.every({ ...c, state: st }) : null;
       return every ? { ...tree, every } : tree;
     }
@@ -1042,6 +1056,13 @@ function makeStandardScreen({ kino: kino2, name, nameEn, logo = null, logoAspect
     return handler ? await handler({ ...e, state: e.state || {} }) ?? null : null;
   }
   return { screen: screen2, screenEvent: screenEvent2, notePlayed };
+}
+
+// src/std/rank.js
+var NEVER_OFFER = /waaw|netu|hqq\./i;
+function offered(url, score) {
+  if (NEVER_OFFER.test(String(url || ""))) return false;
+  return !(typeof score === "number" && score < 0);
 }
 
 // src/logo.js
@@ -1407,7 +1428,7 @@ function ordered(copies) {
   const langs = languageOrder();
   const stats = readStats();
   const rank = (c) => langs.indexOf(c.lang) * 100 + (1 - scoreOf(c.server, stats)) * 20 + Math.max(0, SERVER_ORDER.indexOf(c.server));
-  return [...copies].sort((a, b) => rank(a) - rank(b));
+  return copies.filter((c) => offered(c.url) && offered(c.server)).sort((a, b) => rank(a) - rank(b));
 }
 var labelOf = (c) => `${t(c.lang)} \xB7 ${SERVER_LABEL[c.server] || c.server}`;
 var copyRef = (ep, c) => `cp:${ep.tmdbId}:${ep.season}:${ep.episode}:${c.lang}:${c.server}`;
