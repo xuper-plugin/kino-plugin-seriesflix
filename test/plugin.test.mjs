@@ -313,3 +313,14 @@ test("the cache action empties only the cached shows", async () => {
   assert.equal((await plugin.action("clearCache")).message, "Caché de títulos vaciada.");
   assert.deepEqual([...store.keys()], ["other"]);
 });
+
+test("every TV genre tile has an https TMDB art URL (but the ones with no fitting picture); an unknown genre has none", async () => {
+  const withArt = [10759, 16, 35, 80, 99, 18, 10751, 10762, 9648, 10764, 10765, 10768, 37];
+  tmdbImpl = async () => ({ genres: withArt.map((id) => ({ id, name: "G" + id })) });
+  const cats = await plugin.categories();
+  assert.equal(cats.length, withArt.length);
+  for (const c of cats) assert.match(c.art, /^https:\/\/image\.tmdb\.org\/t\/p\/w780\/[A-Za-z0-9]+\.jpg$/, c.id);
+  tmdbImpl = async () => ({ genres: [{ id: 999999, name: "Nuevo" }] });
+  const odd = await plugin.categories();
+  assert.equal(odd[0].art, undefined);
+});

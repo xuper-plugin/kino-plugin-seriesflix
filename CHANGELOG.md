@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.8
+
+- Categorías: every genre tile now shows a picture (a well-known TMDB backdrop per genre, no extra requests)
+
 ## 1.3.7
 
 - Netu/Waaw no longer appears among the servers (std 1.9.3)

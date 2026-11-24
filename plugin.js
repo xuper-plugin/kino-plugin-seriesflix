@@ -1359,9 +1359,40 @@ async function browse(ref, cursor) {
   const next = res?.page < res?.total_pages ? String(page + 1) : void 0;
   return { items, next };
 }
+var TILE_ART_SIZE = "w780";
+var TV_ART = {
+  10759: "/yUOFocKDW7MCC5isx4FK8A68QFp.jpg",
+  // Action & Adventure: Lost
+  16: "/qcSHGC5BfoqBoP99PzDIERYG5Qm.jpg",
+  // Animation: The Simpsons
+  35: "/l0qVZIpXtIo7km9u5Yqh0nKPOr5.jpg",
+  // Comedy: Friends
+  80: "/xGexTKCJDkl12dTW4YCBDXWb1AD.jpg",
+  // Crime: Money Heist
+  99: "/sW7VOrkHKYIeV9PaYc5IqGU2XK8.jpg",
+  // Documentary: My Octopus Teacher
+  18: "/jP0Rhj9OTPDAwQlHQwOLFDdeE8t.jpg",
+  // Drama: Grey's Anatomy
+  10751: "/iJgNOTSBNrC90U2xyYq9ln0b35o.jpg",
+  // Family: Paddington 2
+  10762: "/f3f5OzzYd8m3zN47DAjKs0sbx00.jpg",
+  // Kids: SpongeBob SquarePants
+  9648: "/4HWAQu28e2yaWrtupFPGFkdNU7V.jpg",
+  // Mystery: Knives Out
+  10764: "/qnTBxxv7q4xVwgZBLb0vtILLelh.jpg",
+  // Reality: Keeping Up with the Kardashians
+  10765: "/9P4IIMYY3HifqeruZq0ZZ9g7YUi.jpg",
+  // Sci-Fi & Fantasy: Stranger Things
+  10768: "/bdD39MpSVhKjxarTxLSfX6baoMP.jpg",
+  // War & Politics: Saving Private Ryan
+  37: "/x4biAVdPVCghBlsVIzB6NmbghIz.jpg"
+  // Western: The Good, the Bad and the Ugly
+};
+var tileArt = (table, genreId) => table[genreId] ? TMDB_IMG + TILE_ART_SIZE + table[genreId] : void 0;
+var withArt = (tile, art) => art ? { ...tile, art } : tile;
 async function categories() {
   const res = await tmdb("/genre/tv/list");
-  return (res?.genres || []).slice(0, 24).map((g) => ({ id: "gt" + g.id, title: g.name, ref: "genre:tv:" + g.id }));
+  return (res?.genres || []).slice(0, 24).map((g) => withArt({ id: "gt" + g.id, title: g.name, ref: "genre:tv:" + g.id }, tileArt(TV_ART, g.id)));
 }
 async function episodes(ref) {
   const tmdbId = ref.startsWith("s:") ? ref.slice(2) : ref;
