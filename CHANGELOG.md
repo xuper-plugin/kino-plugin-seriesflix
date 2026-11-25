@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.10
+
+- The catalog door also lists a series' episodes, for the author's other plugins (std 1.10.0)
+
 ## 1.3.9
 
 - Home: the Anime row shows what is airing now (Japanese animation with an episode in the last 60 days, popular first) instead of the all-time favourites; every row stays typed

@@ -1147,6 +1147,7 @@ async function resolverInstalled(kino2) {
 
 // src/std/catalog.js
 var CATALOG_MAX = 40;
+var CATALOG_EPISODES_MAX = 500;
 var OVERVIEW_MAX2 = 300;
 var HTTPS3 = /^https:\/\//;
 function catalogItems(found) {
@@ -1169,13 +1170,42 @@ function catalogItems(found) {
 function catalogQuery(arg) {
   const q = String(arg && arg.q || "").trim().slice(0, 200);
   const type = arg && (arg.type === "movie" || arg.type === "series") ? arg.type : "any";
-  return { q, type, season: 0, episode: 0, tmdbId: 0, year: 0, originalTitle: "", altTitles: [], cursor: null };
+  const tmdbId = arg && Number.isInteger(arg.tmdb) && arg.tmdb > 0 ? arg.tmdb : 0;
+  return { q, type, season: 0, episode: 0, tmdbId, year: 0, originalTitle: "", altTitles: [], cursor: null };
 }
 function catalogDoor(search2) {
   return async (arg) => {
     const query = catalogQuery(arg);
     if (!query.q) return [];
     return catalogItems(await search2(query));
+  };
+}
+function wholeNumber(v) {
+  if (Number.isInteger(v)) return v;
+  if (typeof v === "string" && /^\s*\d+\s*$/.test(v)) return parseInt(v, 10);
+  return null;
+}
+function catalogEpisodes(list) {
+  const rows2 = Array.isArray(list) ? list : list && Array.isArray(list.episodes) ? list.episodes : [];
+  const out = [];
+  for (const e of rows2) {
+    if (out.length >= CATALOG_EPISODES_MAX) break;
+    if (!e) continue;
+    const number = wholeNumber(e.number);
+    if (number === null || number < 1 || typeof e.ref !== "string" || !e.ref) continue;
+    const season = e.season === void 0 || e.season === null ? 1 : wholeNumber(e.season);
+    if (season === null || season < 0) continue;
+    const row = { season, number, ref: e.ref };
+    if (typeof e.title === "string" && e.title) row.title = e.title;
+    out.push(row);
+  }
+  return out;
+}
+function catalogEpisodesDoor(episodes2) {
+  return async (arg) => {
+    const ref = arg && typeof arg.ref === "string" ? arg.ref.trim() : "";
+    if (!ref) return [];
+    return catalogEpisodes(await episodes2(ref));
   };
 }
 
@@ -1573,6 +1603,7 @@ async function screenEvent(ev) {
   return standard().screenEvent(ev && typeof ev === "object" ? ev : {});
 }
 var proto_catalog_search = catalogDoor(search);
+var proto_catalog_episodes = catalogEpisodesDoor(episodes);
 export {
   HOME_ROWS,
   action,
@@ -1582,6 +1613,7 @@ export {
   episodes,
   home,
   homeRowTags,
+  proto_catalog_episodes,
   proto_catalog_search,
   resolve,
   screen,
